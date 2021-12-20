@@ -1,7 +1,7 @@
-from vision.probav_isr.data_load import DataLoader
-from vision.probav_isr.train_utils import *
+from data_handlers.data_load import DataLoader
+from utils.train_utils import *
+import os
 
-import random
 import tensorflow.keras as keras
 from tensorflow.keras.optimizers import Adam
 
@@ -12,6 +12,8 @@ import pandas as pd
 import datetime
 import matplotlib.pyplot as plt
 
+import tensorflow as tf
+
 
 class Trainner:
     """
@@ -20,9 +22,13 @@ class Trainner:
     Para futuras funcionalidades en los entrenamientos introducirlas aquí.
     """
 
+    physical_devices = tf.config.list_physical_devices('GPU') 
+    for device in physical_devices:
+        tf.config.experimental.set_memory_growth(device, True)
+
     def __init__(self, gan, dataloader, base_path,
                  decay_coef=1, blocks=32, 
-                 dis_lr=1e-2, gen_lr=1e-4,
+                 dis_lr=1e-6, gen_lr=1e-4,
                  decay=1e-8, dis_weight=1e-3,
                  gen_weight=5*1e-3):
 
@@ -56,7 +62,11 @@ class Trainner:
                            optimizer=gan_optimizer)
         self.decay_coef = decay_coef
 
-    def train(self, epochs=2000, batch_size=10, intervalo=200, ronda=0):
+    def train(self, epochs=2000, batch_size=10, intervalo=1, ronda=0):
+
+        path_orig = "/workspaces/probaV-super-resolution/results/"
+        time_path = str(datetime.datetime.now())
+        os.mkdir(f"{path_orig}{time_path}")
 
         start_time = datetime.datetime.now()
         imgs_hr, imgs_lr = self.data_loader.load_data(self.data_len)
@@ -73,8 +83,8 @@ class Trainner:
             g_losses = []
 
             print('-' * 10, 'Epoca %d' % (epoch + 1), '-' * 10)
-            for batch_idx in batch_imgs_index:
-
+            epoch_start = datetime.datetime.now()
+            for num, batch_idx in enumerate(batch_imgs_index):
                 batch = imgs_lr[batch_idx]
                 batch_lbl = imgs_hr[batch_idx]
                 batch_len = len(batch)
@@ -86,21 +96,22 @@ class Trainner:
                 fake = np.random.random(batch_len) * \
                        ((1 * self.decay_coef) / (epoch + 1))
 
-                self.discriminator.trainable = True
+                if epoch%30==0:
+                    self.discriminator.trainable = True
+                else:
+                    self.discriminator.trainable = False
 
                 d_loss_real = self.discriminator.train_on_batch(batch_lbl, valida)
                 d_loss_fake = self.discriminator.train_on_batch(fake_hr, fake)
-                print("reales",d_loss_real)
-                print("falsas",d_loss_fake)
+
                 d_losses.append(0.5 * np.add(d_loss_real, d_loss_fake))
-                print("end discriminator")
                 # Generador
 
                 select = np.random.choice(range(len(batch_imgs_index)),1)
                 imgs_lr_aux = imgs_lr[select]
                 imgs_hr_aux = imgs_hr[select]
 
-                fake_hr_aux = self.generator.predict(imgs_lr_aux)
+                # fake_hr_aux = self.generator.predict(imgs_lr_aux)
                 valida = np.zeros(len(imgs_lr_aux))
 
                 self.discriminator.trainable = False
@@ -109,27 +120,37 @@ class Trainner:
                     imgs_lr_aux,
                     [imgs_hr_aux, valida]
                 )
+                
                 #  GAN-GENERATOR-DISCRIMINATOR
                 g_losses.append(g_loss[1])
-                print("end generator")
-                elapsed_time = datetime.datetime.now() - start_time
-
                 #print("iteration {}/{} en época {}/{}".format(iteration + 1,
                 #                                              data_len // batch_size,
                 #                                              epoch + 1,
                 #                                              epochs))
-                print("         time:           %s" % elapsed_time)
+                
+                #print("         time:           %s" % elapsed_time)
 
-                print("plots") 
-                self.plot_multiple_axis(g_losses,d_losses)
-
-            self.generator.save('../resultados/gen_model{}.h5'.format(epoch + 1))
-            self.discriminator.save('../resultados/dis_model{}.h5'.format(epoch + 1))
-            self.srgan.save('../resultados/gan_model{}.h5'.format( epoch + 1))
+                # print("plots") 
+                # self.plot_multiple_axis(g_losses,d_losses)
+                if num%100==0:
+                    elapsed_time2 = datetime.datetime.now() - epoch_start
+                    print("time 100 batchs: ",elapsed_time2)
+                    epoch_start = datetime.datetime.now()
+            
+            if epoch%10==0:
+                self.generator.save(
+                    f'{path_orig}{time_path}/gen_model{epoch + 1}.h5'
+                )
+                self.discriminator.save(
+                    f'{path_orig}{time_path}/dis_model{epoch + 1}.h5'
+                )
+                self.srgan.save(
+                    f'{path_orig}{time_path}/gan_model{epoch+1}.h5'
+                )
 
             self.analytics["gloss"].append(np.mean(g_losses))
             self.analytics["dloss"].append(np.mean(d_losses))
-            self.save_process(self.analytics, epoch)
+            # self.save_process(self.analytics, epoch)
             print('discriminator loss', np.mean(d_losses))
             print('generator loss', np.mean(g_losses))
 
@@ -163,21 +184,31 @@ class Trainner:
 
     @staticmethod
     def save_process(statics, epoch):
-        pd.to_pickle(statics, f"../results/statics{epoch}")
+        pd.to_pickle(statics, f"/workspaces/probaV-super-resolution/results/statics{epoch}")
 
 
 if __name__ == "__main__":
-    from srgan_model import SRGAN
+    from models.srgan_model import SRGAN
 
-    tr = Trainner(SRGAN(blocks=4), DataLoader(), "../data/train/")
-    tr.data_loader.dataset_name = "../data/"
-    tr.train(batch_size=100, epochs=5)
-    # model = tf.keras.models.load_model(
-    #     '/workspace/resultados/gan_model1.h5',
-    #     compile=False
-    #     )
-    # model.compile(loss=[cMSE, 'binary_crossentropy'],
-    #                        loss_weights=[0.8, 0.2],
-    #                        optimizer="adam")
-    # a,b=tr.data_loader.load_data(10)
-    # pred = model.predict(b)
+    tr = Trainner(
+        SRGAN(blocks=2),
+        DataLoader(),
+        "/workspaces/probaV-super-resolution/data/train/",
+
+        )
+    tr.data_loader.dataset_name = "/workspaces/probaV-super-resolution/data/"
+    tr.train(batch_size=16, epochs=200)
+    model = tf.keras.models.load_model(
+        '/workspaces/probaV-super-resolution/results/2021-12-20 17:30:48.061651/gan_model1.h5',
+        compile=False
+    )
+    model.compile(
+        loss=[cMSE, 'binary_crossentropy'],
+        loss_weights=[0.8, 0.2],
+        optimizer=Adam(learning_rate=0.00005),
+    )
+    a,b=tr.data_loader.load_data(10)
+    pred = model.predict(b)
+    for i in pred[0]:
+        plt.imshow(i)
+        plt.show()
