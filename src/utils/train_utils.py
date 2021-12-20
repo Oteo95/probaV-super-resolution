@@ -8,7 +8,7 @@ def cMSE(hr, sr):
     imágenes hiper-espectrales NIR y RED.
     """
 
-    obs = tf.equal(hr, 0.05)
+    obs = tf.equal(hr, 0.01)
     clr = tf.math.logical_not(obs)
     _hr = tf.boolean_mask(hr, clr)
     _sr = tf.boolean_mask(sr, clr)

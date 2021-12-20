@@ -1,0 +1,17 @@
+pandas
+numpy
+matplotlib
+tensorflow-addons
+image
+imageio
+imagesize
+multiprocess
+multitasking
+scikit-learn
+scipy
+seaborn
+tornado
+urllib3
+jupyterlab
+tqdm
+scikit-image

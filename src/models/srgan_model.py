@@ -9,7 +9,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import LeakyReLU, PReLU
 from tensorflow.keras.layers import add
 
-from vision.probav_isr.srgan_base import SrganBase
+from models.srgan_base import SrganBase
 
 
 class SRGAN(SrganBase):
@@ -33,7 +33,7 @@ class SRGAN(SrganBase):
         """
 
         gen_input = Input(shape=self.lr_shape)
-        model = Conv2D(filters=64, kernel_size=9,
+        model = Conv2D(filters=8, kernel_size=9,
                        strides=1, padding="same")(gen_input)
         model = PReLU(shared_axes=[1, 2])(model)
 
@@ -41,19 +41,19 @@ class SRGAN(SrganBase):
 
         # Uso n Residual Blocks
         for _ in range(self.res_block):
-            model = self.res_block_gen(model, 3, 64, 1)
+            model = self.res_block_gen(model, 3, 8, 1)# 64
 
-        model = Conv2D(filters=64, kernel_size=3, strides=1,
+        model = Conv2D(filters=8, kernel_size=3, strides=1,
                        padding="same")(model)
         model = BatchNormalization(momentum=0.3)(model)
         model = add([gen_model, model])
 
         # Uso 1 UpSampling Block
-        model = self.up_sampling_block(model, 3, 256, 1)
+        model = self.up_sampling_block(model, 3, 128, 1) #256
 
         model = Conv2D(filters=self.channels, kernel_size=9,
                        strides=1, padding="same")(model)
-        model = Activation('sigmoid')(model)
+        model = Activation('linear')(model)
 
         generator_model = Model(inputs=gen_input, outputs=model)
 
@@ -66,17 +66,17 @@ class SRGAN(SrganBase):
 
         dis_input = Input(shape=self.hr_shape)
 
-        model = Conv2D(filters=32, kernel_size=3, strides=1,
+        model = Conv2D(filters=4, kernel_size=3, strides=1,
                        padding="same")(dis_input)
         model = LeakyReLU(alpha=0.2)(model)
 
-        model = self.discriminator_block(model, 32, 3, 2)
+        model = self.discriminator_block(model, 4, 3, 2)
         for i in [1, 2, 3]:
-            model = self.discriminator_block(model, 64 * i, 3, 1)
-            model = self.discriminator_block(model, 64 * i, 3, 2)
+            model = self.discriminator_block(model, 4 * i, 3, 1)
+            model = self.discriminator_block(model, 4 * i, 3, 2)
 
         model = Flatten()(model)
-        model = Dense(512)(model)
+        model = Dense(32)(model)
         model = LeakyReLU(alpha=0.1)(model)
 
         model = Dense(1)(model)

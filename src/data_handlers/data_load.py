@@ -3,6 +3,7 @@ import pandas as pd
 from glob import glob
 from tqdm import tqdm
 import skimage
+import skimage.io
 import os
 import itertools
 import scipy
@@ -16,17 +17,15 @@ class DataLoader:
     transformaciones.
     """
 
-    def __init__(self):
-        self.dataset_name = "./data/"
+    def __init__(self, data_path="../data/"):
+        self.dataset_name = data_path
 
     @staticmethod
     def all_scenes_paths(base_path):
         """
         Obtención de los paths de las imágenes.
         """
-        if base_path[-1] in {'/'}:
-            base_path = base_path
-        else:
+        if base_path[-1] not in {'/'}:
             base_path = base_path + '/'
         return [base_path + c + s
                 for c in ['RED/', 'NIR/']
@@ -49,8 +48,8 @@ class DataLoader:
 
         for f in glob(path + 'LR*.png'):
             q = f.replace('LR', 'QM')
-            lr = skimage.io.imread(f, dtype=np.uint16)
-            cm = skimage.io.imread(q, dtype=np.bool)
+            lr = skimage.io.imread(f, as_gray=True)
+            cm = skimage.io.imread(q, as_gray=True)
             if img_as_float:
                 lr = skimage.img_as_float(lr)
             yield (lr, cm)
@@ -70,8 +69,8 @@ class DataLoader:
         else:
             path = path + '/'
 
-        hr = skimage.io.imread(path + 'HR.png', dtype=np.uint16)
-        sm = skimage.io.imread(path + 'SM.png', dtype=np.bool)
+        hr = skimage.io.imread(path + 'HR.png', as_gray=True)
+        sm = skimage.io.imread(path + 'SM.png', as_gray= True)
         if img_as_float:
             hr = skimage.img_as_float(hr)
         return hr, sm
@@ -134,13 +133,17 @@ class DataLoader:
         Todo el dataset tarda alrededor de 30 segundos
         """
         train = self.all_scenes_paths(self.dataset_name + 'train')
-        batch_images = np.random.choice(train, size=batch_size)
+        dataset_size = len(train)
+        batch_images = np.random.choice(
+            train,
+            size=min(batch_size, dataset_size)
+        )
         imgs_hr = []
         imgs_lr = []
 
         for img_path in batch_images:
             hr, sm = self.highres_image(img_path)
-            hr[~sm] = 0.05
+            hr[~sm] = 0.01
             img_hr = hr
 
             img_lr = self.transformacion_inputs(img_path,
