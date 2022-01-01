@@ -2,11 +2,8 @@ from data_handlers.data_load import DataLoader
 from utils.train_utils import *
 import os
 
-import tensorflow.keras as keras
 from tensorflow.keras.optimizers import Adam
 
-import time
-import random
 import numpy as np
 import pandas as pd
 import datetime

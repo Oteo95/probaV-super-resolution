@@ -10,10 +10,42 @@
 	"dockerFile": "../dockerfiles/gpu.dockerfile",
 
 	// Set *default* container specific settings.json values on container create.
-	"settings": {},
-	
+	"settings":  {
+		"terminal.integrated.shell.linux": "/bin/bash",
+		"python.pythonPath": "/usr/local/bin/python",
+		"python.linting.enabled": true,
+		"python.linting.pylintEnabled": false,
+		"python.linting.flake8Path": "/usr/local/bin/flake8",
+		"python.linting.flake8Enabled": true,
+		"python.testing.pytestPath": "/usr/local/bin/pytest",
+		"python.testing.pytestEnabled": true,
+		"python.testing.unittestEnabled": false,
+		"python.testing.autoTestDiscoverOnSaveEnabled": true,
+		"autoDocstring.docstringFormat": "numpy",	
+		"files.eol": "\n",
+		"files.exclude": {
+			".pytest_cache": true,
+			"*/**/__pycache__": true,
+			"*/**/.ipynb_checkpoints": true,
+			"*.pyc": true,
+		},
+		"python.testing.pytestArgs": [
+			"-s",
+			"--disable-pytest-warnings",
+			"./src/",
+	   ],
+	},
 	// Add the IDs of extensions you want installed when the container is created.
-	"extensions": [],
+	"extensions": [
+		"amazonwebservices.aws-toolkit-vscode",
+		"eamodio.gitlens",
+		"njpwerner.autodocstring",
+		"tomoki1207.pdf",
+		"ms-python.python",
+		"ms-azuretools.vscode-azureresourcegroups",
+		"ms-azuretools.vscode-azurestorage",
+		"ms-vscode.azure-account"
+	],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
