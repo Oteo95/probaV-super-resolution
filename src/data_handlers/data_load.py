@@ -17,7 +17,7 @@ class DataLoader:
     transformaciones.
     """
 
-    def __init__(self, data_path="../data/"):
+    def __init__(self, data_path="/workspaces/probaV-super-resolution/data/"):
         self.dataset_name = data_path
 
     @staticmethod
